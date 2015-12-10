@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Fuzz Test - Dan Turcotte Solution</title>
+		<style>
+			body {font-family:monospace;}
+		</style>
+	
+		<script type="text/javascript">
+			/*
+				Elegantly unscramble this message using the space provided. 
+				Then write the scrambler that made it. 
+				The answer is an object with global scope that can scramble and unscramble any text any number of times.
+			*/
+			document.addEventListener("DOMContentLoaded", function(event) { 
+				
+				function log (w) {
+					console.log(w);
+				}
+		
+				(function() {				
+					var html = 
+						'Scramble Message (press enter):<br/> <textarea rows="4" cols="50" id="textbox"></textarea><br/>' + 
+						'<button id="unscramble" disabled>Unscramble</button><hr>' +
+						'<div id="msg"></div>';
+
+					document.body.innerHTML = html;
+					
+					MessageManipulator = MessageManipulator || {};
+					
+					var MessageManipulator = { 	
+						msgDiv : document.getElementById("msg"), 
+						txtBox : document.getElementById("textbox"), 
+						button : document.getElementById("unscramble"),
+								
+						init : function () {
+							this.txtBox.addEventListener("keydown", this.verifyKey.bind(this));
+							this.button.addEventListener("click", this.unscrambler);
+						},  
+								 
+						verifyKey : function (e) {
+							if (e.keyCode == 13) this.scrambler.init(this.txtBox.value);
+						},
+								 
+						scrambler : {
+							randomChars : [],
+							init : function (message) {
+								//http://jsperf.com/innerhtml-vs-removechild
+								while (MessageManipulator.msgDiv.firstChild) {
+									MessageManipulator.msgDiv.removeChild(MessageManipulator.msgDiv.firstChild);
+								}	
+								MessageManipulator.txtBox.value = '';
+								MessageManipulator.button.disabled = false;
+								this.randomChars = [];
+								this.getUnicode();
+								this.insertMsg(this.getRandomIndices(message), message);
+							},
+
+							//populate and shuffle unicode array
+							getUnicode : function () {
+								for(var i=33;i<127;++i) {
+									var rand = Math.floor((Math.random() * 200) + 1);
+									for (var j = 0; j < rand; j++) {
+										var el = document.createElement('span');
+										el.innerHTML = String.fromCharCode(i);
+										this.randomChars.push(el);
+									}
+								}
+								this.shuffle(this.randomChars);
+							},
+							
+							//create random indices to scatter message chars into array in sorted order
+							getRandomIndices : function (message) {
+								var randomIndices = [];
+								for (var i = 0; i < message.split("").length; i++) {	
+									var rand = Math.floor((Math.random() * this.randomChars.length) + 1);
+									if (randomIndices.indexOf(rand) == -1) {
+										randomIndices.push(rand);   
+									}
+								}
+								return randomIndices.sort(function(a, b) { return a-b; });
+							},
+							
+							//insert the letters into array according to sorted indices
+							insertMsg : function (sortedIndicesAry, message) {						
+								for (var i = 0; i < sortedIndicesAry.length; i++) {	
+									var letters = document.createElement('span');
+									letters.innerHTML = message.split("")[i];
+									letters.setAttribute("hidden","");
+									this.randomChars.splice(sortedIndicesAry[i], 0, letters); 
+								}
+								
+								var counter = 0;
+								for (var i = 0; i < this.randomChars.length; i++) {
+									if (counter >= 100) {
+										MessageManipulator.msgDiv.appendChild(document.createElement("br"));
+										counter = 0;
+									}
+									MessageManipulator.msgDiv.appendChild(this.randomChars[i]);
+									counter++;
+								}
+							},
+
+							shuffle : function (array){ 
+								for(var j, x, i = array.length; i; j = Math.floor(Math.random() * i), x = array[--i], array[i] = array[j], array[j] = x);
+								return array;
+							} 
+						},
+						
+						//get all hidden spans' text in new array, join them into string
+						unscrambler : function () {						
+							if (MessageManipulator.msgDiv.innerHTML != "") {
+								var nodeList = document.querySelectorAll("span[hidden]");
+								MessageManipulator.msgDiv.innerHTML =
+									Array.prototype.map.call(nodeList, 
+									function(a){ 
+										return a.textContent; 
+									}).join("");
+							}
+							MessageManipulator.button.disabled = true;				
+						}
+					};
+					MessageManipulator.init();
+				})();
+			});		
+		</script>
+	</head>
+	<body></body>
+</html>
